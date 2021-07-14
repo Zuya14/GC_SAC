@@ -168,7 +168,7 @@ class square3Env(gym.Env):
     def reset(self, tgtpos=[7.0, 1.5, 0.0]):
         assert self.sim is not None, print("call setting!!") 
         self.sim.reset(sec=self.sec, tgtPos=tgtpos)
-        return self.observe()
+        return self.observe_all()
 
     def createLidar(self):
         resolusion = 8
@@ -190,7 +190,7 @@ class square3Env(gym.Env):
 
         done = self.sim.step(action)
 
-        state, velocity, observation = self.observe()
+        state, velocity, observation = self.observe_all()
 
         reward = self.get_reward()
 

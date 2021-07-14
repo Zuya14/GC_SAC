@@ -85,7 +85,7 @@ class CriticNetwork(nn.Module):
 
 class GC_SAC():
 
-    def __init__(self, state_size, velocity_size, observe_size, action_size, goal_size, hidden_size=64, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+    def __init__(self, state_size, velocity_size, observation_size, action_size, goal_size, hidden_size=64, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  batch_size=256, gamma=0.99, lr_actor=1e-3, lr_critic=1e-3,
                  replay_size=10**6, start_steps=10**4, tau=5e-3, alpha=0.2, reward_scale=1.0, epsilon_decay = 50000):
 
@@ -103,17 +103,17 @@ class GC_SAC():
 
         # Actor-Criticのネットワークを構築する．
         self.actor = ActorNetwork(
-            state_size=state_size[0]+velocity_size[0]+observation_size+goal_size[0],
+            state_size=state_size[0]+velocity_size[0]+observation_size[0]+goal_size[0],
             action_size=action_size[0],
             hidden_size=hidden_size
         ).to(device)
         self.critic = CriticNetwork(
-            state_size=state_size[0]+velocity_size[0]+observation_size+goal_size[0],
+            state_size=state_size[0]+velocity_size[0]+observation_size[0]+goal_size[0],
             action_size=action_size[0],
             hidden_size=hidden_size
         ).to(device)
         self.critic_target = CriticNetwork(
-            state_size=state_size[0]+velocity_size[0]+observation_size+goal_size[0],
+            state_size=state_size[0]+velocity_size[0]+observation_size[0]+goal_size[0],
             action_size=action_size[0],
             hidden_size=hidden_size
         ).to(device).eval()
@@ -128,6 +128,17 @@ class GC_SAC():
         self.optim_critic = torch.optim.Adam(self.critic.parameters(), lr=lr_critic)
 
         self.device = device
+
+        # その他パラメータ．
+        self.action_size = action_size
+        self.learning_steps = 0
+        self.batch_size = batch_size
+        self.device = device
+        self.gamma = gamma
+        self.start_steps = start_steps
+        self.tau = tau
+        self.alpha = alpha
+        self.reward_scale = reward_scale
     
     def explore(self, obs_all, goal):
         """ 確率論的な行動と，その行動の確率密度の対数 \log(\pi(a|s)) を返す． """

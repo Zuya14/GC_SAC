@@ -86,7 +86,7 @@ class Trainer:
             done = False
             episode_return = 0.0
 
-            state, velocity obs = obs_all
+            state, velocity, obs = obs_all
 
             if self.algo.name == 'TDM':
                 for _ in range(self.env_test._max_episode_steps):

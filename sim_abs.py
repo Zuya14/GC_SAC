@@ -131,10 +131,10 @@ class sim_abs(ABC):
 
     def getState(self):
         pos, ori = self.getRobotPosInfo()
-        return pos[0], pos[1], p.getEulerFromQuaternion(ori)[2]
+        return np.array([pos[0], pos[1], p.getEulerFromQuaternion(ori)[2]])
 
     def getVelocity(self):
-        self.vx, self.vy, self.w 
+        np.array([self.vx, self.vy, self.w ])
 
     def render(self, bullet_lidar):
         pos, ori = self.getRobotPosInfo()

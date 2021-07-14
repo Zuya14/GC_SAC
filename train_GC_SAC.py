@@ -7,7 +7,7 @@ from trainer import Trainer
 # from mazeEnv import mazeEnv 
 # from crossEnv import crossEnv 
 from square3Env import square3Env 
-from maze3Env import maze3Env 
+# from maze3Env import maze3Env 
 
 # ENV_ID = 'InvertedPendulumBulletEnv-v0'
 SEED = 0
@@ -38,6 +38,8 @@ env_test.setting()
 algo = GC_SAC(
     state_size=env.observation_space.shape,
     action_size=env.action_space.shape,
+    velocity_size=env.velocity_space.shape,
+    observation_size=env.observation_space.shape,
     goal_size = env.observation_space.shape,
     epsilon_decay = NUM_STEPS,
     start_steps=1000
