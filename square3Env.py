@@ -157,18 +157,21 @@ class square3Env(gym.Env):
 
         new_env.lidar = new_env.createLidar()
 
-        new_env.state_space = gym.spaces.Box(low=0.0, high=9.0, shape=(2,))
-        new_env.velocity_space = gym.spaces.Box(low=0.0, high=9.0, shape=(2,))
+        new_env.state_space = gym.spaces.Box(low=0.0, high=9.0, shape=(3,))
+        new_env.velocity_space = gym.spaces.Box(low=0.0, high=9.0, shape=(3,))
         new_env.observation_space = gym.spaces.Box(low=0.0, high=9.0, shape=(self.lidar[0],))
 
         new_env.sec = self.sec
 
         return new_env
 
-    def reset(self, tgtpos=[7.0, 1.5, 0.0]):
+    def reset(self, initpos=None, tgtpos=[7.0, 1.5, 0.0]):
         assert self.sim is not None, print("call setting!!") 
-        self.sim.reset(sec=self.sec, tgtPos=tgtpos)
+        self.sim.reset(sec=self.sec, initPos=initpos, tgtPos=tgtpos)
         return self.observe_all()
+
+    def test_reset(self):
+        return self.reset(initpos=[1.0, 1.0, 0.0])
 
     def createLidar(self):
         resolusion = 8

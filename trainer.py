@@ -91,22 +91,22 @@ class Trainer:
             if self.algo.name == 'TDM':
                 for _ in range(self.env_test._max_episode_steps):
                     action = self.algo.exploit(obs_all, goal, self.env_test.get_left_steps())
-                    state, reward, done, _ = self.env_test.step(action)
+                    obs_all, reward, done, _ = self.env_test.step(action)
                     episode_return += reward
                     # episode_return += sum(reward)
                     if done:
                         break
             elif self.is_GC:
                 for _ in range(self.env_test._max_episode_steps):
-                    action = self.algo.exploit(obs_all, goal)
-                    state, reward, done, _ = self.env_test.step(action)
+                    action = self.algo.exploit(obs_all, goal, state)
+                    obs_all, reward, done, _ = self.env_test.step(action)
                     episode_return += reward
                     if done:
                         break
             else:
                 for _ in range(self.env_test._max_episode_steps):
                     action = self.algo.exploit(obs_all)
-                    state, reward, done, _ = self.env_test.step(action)
+                    obs_all, reward, done, _ = self.env_test.step(action)
                     episode_return += reward
                     if done:
                         break
@@ -166,13 +166,15 @@ class Trainer:
         obs_all = self.env.test_reset()
         goal = self.env.sim.tgt_pos
 
+        state, velocity, obs = obs_all
+
         video.write(self.env.render())
 
         for _ in range(self.env._max_episode_steps):
             if self.algo.name == 'TDM':
                 action = self.algo.exploit(obs_all, goal, self.env_test.get_left_steps())
             elif self.is_GC:
-                action = self.algo.exploit(obs_all, goal)
+                action = self.algo.exploit(obs_all, goal, state)
             else:
                 action = self.algo.exploit(obs_all)
             obs_all, _, done, _ = self.env.step(action)

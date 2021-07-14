@@ -140,18 +140,26 @@ class GC_SAC():
         self.alpha = alpha
         self.reward_scale = reward_scale
     
-    def explore(self, obs_all, goal):
+    def is_update(self, steps):
+        # 学習初期の一定期間(start_steps)は学習しない．
+        return steps >= max(self.start_steps, self.batch_size)
+
+    def explore(self, obs_all, goal, state):
         """ 確率論的な行動と，その行動の確率密度の対数 \log(\pi(a|s)) を返す． """
+        _obs_all = np.concatenate(obs_all)
+
         # state_input = torch.tensor(np.concatenate([obs_all, goal]), dtype=torch.float, device=self.device).unsqueeze_(0)
-        state_input = torch.tensor(np.concatenate([obs_all, goal-state]), dtype=torch.float, device=self.device).unsqueeze_(0)
+        state_input = torch.tensor(np.concatenate([_obs_all, goal-state]), dtype=torch.float, device=self.device).unsqueeze_(0)
         with torch.no_grad():
             action, log_pi = self.actor.sample(state_input)
         return action.cpu().numpy()[0], log_pi.item()
 
-    def exploit(self, obs_all, goal):
+    def exploit(self, obs_all, goal, state):
         """ 決定論的な行動を返す． """
+        _obs_all = np.concatenate(obs_all)
+
         # state_input = torch.tensor(np.concatenate([obs_all, goal]), dtype=torch.float, device=self.device).unsqueeze_(0)
-        state_input = torch.tensor(np.concatenate([obs_all, goal-state]), dtype=torch.float, device=self.device).unsqueeze_(0)
+        state_input = torch.tensor(np.concatenate([_obs_all, goal-state]), dtype=torch.float, device=self.device).unsqueeze_(0)
         with torch.no_grad():
             action = self.actor(state_input)
         return action.cpu().numpy()[0]
@@ -159,11 +167,13 @@ class GC_SAC():
     def step(self, env, obs_all, goal, t, steps):
         t += 1
 
+        state, velocity, observe = obs_all
+
         # 学習初期の一定期間(start_steps)は，ランダムに行動して多様なデータの収集を促進する．
         if steps <= self.start_steps:
             action = env.action_space.sample()
         else:
-            action, _ = self.explore(obs_all, goal)
+            action, _ = self.explore(obs_all, goal, state)
 
         next_obs_all, reward, done, _ = env.step(action)
 
@@ -178,7 +188,6 @@ class GC_SAC():
         else:
             done_masked = done
 
-        state, velocity, observe = obs_all
         next_state, next_velocity, next_observe = next_obs_all
 
         # リプレイバッファにデータを追加する．
@@ -199,11 +208,11 @@ class GC_SAC():
     def update(self):
         self.learning_steps += 1
         
-        states, velocitys, observes, actions, rewards, done_maskeds, next_states, next_velocity, next_observe, goals = self.buffer.sample(self.batch_size)
+        states, velocitys, observations, actions, rewards, dones, next_states, next_velocitys, next_observations, goals = self.buffer.sample(self.batch_size)
         # states, actions, rewards, dones, collisions, next_states, goals = self.buffer.sample(self.batch_size)
 
-        obs_alls = torch.cat([states, velocity, observe], dim=-1)
-        next_obs_alls = torch.cat([next_states, next_velocity, next_observe], dim=-1)
+        obs_alls = torch.cat([states, velocitys, observations], dim=-1)
+        next_obs_alls = torch.cat([next_states, next_velocitys, next_observations], dim=-1)
 
         self.update_critic(obs_alls, actions, rewards, dones, next_obs_alls, goals, states, next_states)
         self.update_actor(obs_alls, goals, states)
@@ -213,8 +222,6 @@ class GC_SAC():
         # states2 = torch.cat([states, goals], dim=-1)
         states2 = torch.cat([obs_alls, goals-states], dim=-1)
         curr_qs1, curr_qs2 = self.critic(states2, actions)
-
-
 
         with torch.no_grad():
             # next_states2 = torch.cat([next_states, goals], dim=-1)
@@ -241,6 +248,11 @@ class GC_SAC():
         self.optim_actor.zero_grad()
         loss_actor.backward(retain_graph=False)
         self.optim_actor.step()
+
+    def update_target(self):
+        for t, s in zip(self.critic_target.parameters(), self.critic.parameters()):
+            t.data.mul_(1.0 - self.tau)
+            t.data.add_(self.tau * s.data)
 
     def save(self, path="./"):
         torch.save(self.actor.to('cpu').state_dict(), path+"GC_SAC_HER_actor.pth")

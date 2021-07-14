@@ -12,11 +12,10 @@ from square3Env import square3Env
 # ENV_ID = 'InvertedPendulumBulletEnv-v0'
 SEED = 0
 # NUM_STEPS = 5 * 10 ** 4
-NUM_STEPS = 3 * 10 ** 4
-# NUM_STEPS = 10 * 10 ** 4
+# NUM_STEPS = 3 * 10 ** 4
 # NUM_STEPS = 2 * 10 ** 5
 # NUM_STEPS = 25 * 10 ** 4
-# NUM_STEPS = 1 * 10 ** 5
+NUM_STEPS = 1 * 10 ** 5
 # NUM_STEPS = 3 * 10 ** 5
 EVAL_INTERVAL = 10 ** 3
 
@@ -36,11 +35,11 @@ env.setting()
 env_test.setting()
 
 algo = GC_SAC(
-    state_size=env.observation_space.shape,
+    state_size=env.state_space.shape,
     action_size=env.action_space.shape,
     velocity_size=env.velocity_space.shape,
     observation_size=env.observation_space.shape,
-    goal_size = env.observation_space.shape,
+    goal_size = env.state_space.shape,
     epsilon_decay = NUM_STEPS,
     start_steps=1000
 )

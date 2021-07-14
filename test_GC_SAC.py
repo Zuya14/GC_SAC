@@ -7,7 +7,7 @@ from trainer import Trainer
 # from mazeEnv import mazeEnv 
 # from crossEnv import crossEnv 
 from square3Env import square3Env 
-from maze3Env import maze3Env 
+# from maze3Env import maze3Env 
 
 # ENV_ID = 'InvertedPendulumBulletEnv-v0'
 SEED = 0
@@ -20,7 +20,7 @@ EVAL_INTERVAL = 10 ** 3
 # env = gym.make(ENV_ID)
 # env_test = gym.make(ENV_ID)
 
-env_id = 1
+env_id = 0
 
 if env_id == 0:
     env = square3Env()
@@ -33,10 +33,15 @@ env.setting()
 env_test.setting()
 
 algo = GC_SAC(
-    state_size=env.observation_space.shape,
+    state_size=env.state_space.shape,
     action_size=env.action_space.shape,
-    goal_size = env.observation_space.shape
+    velocity_size=env.velocity_space.shape,
+    observation_size=env.observation_space.shape,
+    goal_size = env.state_space.shape,
+    epsilon_decay = NUM_STEPS,
+    start_steps=1000
 )
+
 
 trainer = Trainer(
     env=env,
