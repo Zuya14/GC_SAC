@@ -23,16 +23,16 @@ EVAL_INTERVAL = 10 ** 3
 # env = gym.make(ENV_ID)
 # env_test = gym.make(ENV_ID)
 
-# env = mazeEnv()
-# env = crossEnv()
-env = square3Env()
-# env = maze3Env()
-env.setting()
+env_id = 1
 
-# env_test = mazeEnv()
-# env_test = crossEnv()
-env_test = square3Env()
-# env_test = maze3Env()
+if env_id == 0:
+    env = square3Env()
+    env_test = square3Env()
+elif env_id ==1:
+    env = maze3Env()
+    env_test = maze3Env()
+
+env.setting()
 env_test.setting()
 
 algo = GC_SAC(

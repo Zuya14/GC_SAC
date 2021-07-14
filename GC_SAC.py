@@ -1,5 +1,5 @@
 from DDPG import DDPG, CriticNetwork
-from HindsightReplayBuffer import HindsightReplayBuffer_old
+from ReplayBuffer import ReplayBuffer
 import torch
 import torch.nn as nn
 import numpy as np
@@ -60,35 +60,42 @@ class ActorNetwork(nn.Module):
         means, log_stds = self.net(states).chunk(2, dim=-1)
         return reparameterize(means, log_stds.clamp(-20, 2))
 
+class CriticNetwork(nn.Module):
+    def __init__(self, state_size, action_size, hidden_size=64):
+        super().__init__()
 
-class GC_SAC(DDPG):
+        self.net1 = nn.Sequential(
+            nn.Linear(state_size + action_size, hidden_size),
+            nn.ELU(inplace=True),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ELU(inplace=True),
+            nn.Linear(hidden_size, 1),
+        )
+        self.net2 = nn.Sequential(
+            nn.Linear(state_size + action_size, hidden_size),
+            nn.ELU(inplace=True),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ELU(inplace=True),
+            nn.Linear(hidden_size, 1),
+        )
 
-    def __init__(self, state_size, action_size, goal_size, hidden_size=64, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+    def forward(self, states, actions):
+        x = torch.cat([states, actions], dim=-1)
+        return self.net1(x), self.net2(x)
+
+class GC_SAC():
+
+    def __init__(self, state_size, velocity_size, observe_size, action_size, goal_size, hidden_size=64, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  batch_size=256, gamma=0.99, lr_actor=1e-3, lr_critic=1e-3,
                  replay_size=10**6, start_steps=10**4, tau=5e-3, alpha=0.2, reward_scale=1.0, epsilon_decay = 50000):
 
-        super().__init__(
-            state_size,
-            action_size, 
-            hidden_size, 
-            device,
-            batch_size, 
-            gamma, 
-            lr_actor, 
-            lr_critic,
-            replay_size, 
-            start_steps, 
-            tau, 
-            alpha, 
-            reward_scale,
-            epsilon_decay
-        )
-
         self.name = 'GC_SAC'
 
-        self.buffer = HindsightReplayBuffer_old(
+        self.buffer = ReplayBuffer(
             buffer_size=replay_size,
             state_size=state_size,
+            velocity_size=velocity_size,
+            observation_size=observation_size,
             action_size=action_size,
             goal_size=goal_size,
             device=device
@@ -96,17 +103,17 @@ class GC_SAC(DDPG):
 
         # Actor-Criticのネットワークを構築する．
         self.actor = ActorNetwork(
-            state_size=state_size[0]+goal_size[0],
+            state_size=state_size[0]+velocity_size[0]+observation_size+goal_size[0],
             action_size=action_size[0],
             hidden_size=hidden_size
         ).to(device)
         self.critic = CriticNetwork(
-            state_size=state_size[0]+goal_size[0],
+            state_size=state_size[0]+velocity_size[0]+observation_size+goal_size[0],
             action_size=action_size[0],
             hidden_size=hidden_size
         ).to(device)
         self.critic_target = CriticNetwork(
-            state_size=state_size[0]+goal_size[0],
+            state_size=state_size[0]+velocity_size[0]+observation_size+goal_size[0],
             action_size=action_size[0],
             hidden_size=hidden_size
         ).to(device).eval()
@@ -122,32 +129,32 @@ class GC_SAC(DDPG):
 
         self.device = device
     
-    def explore(self, state, goal):
+    def explore(self, obs_all, goal):
         """ 確率論的な行動と，その行動の確率密度の対数 \log(\pi(a|s)) を返す． """
-        # state = torch.tensor(np.concatenate([state, goal]), dtype=torch.float, device=self.device).unsqueeze_(0)
-        state = torch.tensor(np.concatenate([state, goal-state]), dtype=torch.float, device=self.device).unsqueeze_(0)
+        # state_input = torch.tensor(np.concatenate([obs_all, goal]), dtype=torch.float, device=self.device).unsqueeze_(0)
+        state_input = torch.tensor(np.concatenate([obs_all, goal-state]), dtype=torch.float, device=self.device).unsqueeze_(0)
         with torch.no_grad():
-            action, log_pi = self.actor.sample(state)
+            action, log_pi = self.actor.sample(state_input)
         return action.cpu().numpy()[0], log_pi.item()
 
-    def exploit(self, state, goal):
+    def exploit(self, obs_all, goal):
         """ 決定論的な行動を返す． """
-        # state = torch.tensor(np.concatenate([state, goal]), dtype=torch.float, device=self.device).unsqueeze_(0)
-        state = torch.tensor(np.concatenate([state, goal-state]), dtype=torch.float, device=self.device).unsqueeze_(0)
+        # state_input = torch.tensor(np.concatenate([obs_all, goal]), dtype=torch.float, device=self.device).unsqueeze_(0)
+        state_input = torch.tensor(np.concatenate([obs_all, goal-state]), dtype=torch.float, device=self.device).unsqueeze_(0)
         with torch.no_grad():
-            action = self.actor(state)
+            action = self.actor(state_input)
         return action.cpu().numpy()[0]
 
-    def step(self, env, state, goal, t, steps):
+    def step(self, env, obs_all, goal, t, steps):
         t += 1
 
         # 学習初期の一定期間(start_steps)は，ランダムに行動して多様なデータの収集を促進する．
         if steps <= self.start_steps:
             action = env.action_space.sample()
         else:
-            action, _ = self.explore(state, goal)
+            action, _ = self.explore(obs_all, goal)
 
-        next_state, reward, done, _ = env.step(action)
+        next_obs_all, reward, done, _ = env.step(action)
 
         # ゲームオーバーではなく，最大ステップ数に到達したことでエピソードが終了した場合は，
         # 本来であればその先も試行が継続するはず．よって，終了シグナルをFalseにする．
@@ -160,33 +167,47 @@ class GC_SAC(DDPG):
         else:
             done_masked = done
 
+        state, velocity, observe = obs_all
+        next_state, next_velocity, next_observe = next_obs_all
+
         # リプレイバッファにデータを追加する．
-        self.buffer.append(state, action, reward, done_masked, next_state, goal)
+        self.buffer.append(
+            state, velocity, observe,
+            action, reward, done_masked, 
+            next_state, next_velocity, next_observe, 
+            goal
+            )
 
         # エピソードが終了した場合には，環境をリセットする．
         if done:
             t = 0
-            next_state = env.reset()
+            next_obs_all = env.reset()
 
-        return next_state, t
+        return next_obs_all, t
 
     def update(self):
         self.learning_steps += 1
-        states, actions, rewards, dones, next_states, goals = self.buffer.sample(self.batch_size)
+        
+        states, velocitys, observes, actions, rewards, done_maskeds, next_states, next_velocity, next_observe, goals = self.buffer.sample(self.batch_size)
         # states, actions, rewards, dones, collisions, next_states, goals = self.buffer.sample(self.batch_size)
 
-        self.update_critic(states, actions, rewards, dones, next_states, goals)
-        self.update_actor(states, goals)
+        obs_alls = torch.cat([states, velocity, observe], dim=-1)
+        next_obs_alls = torch.cat([next_states, next_velocity, next_observe], dim=-1)
+
+        self.update_critic(obs_alls, actions, rewards, dones, next_obs_alls, goals, states, next_states)
+        self.update_actor(obs_alls, goals, states)
         self.update_target()
 
-    def update_critic(self, states, actions, rewards, dones, next_states, goals):
+    def update_critic(self, obs_alls, actions, rewards, dones, next_obs_alls, goals, states, next_states):
         # states2 = torch.cat([states, goals], dim=-1)
-        states2 = torch.cat([states, goals-states], dim=-1)
+        states2 = torch.cat([obs_alls, goals-states], dim=-1)
         curr_qs1, curr_qs2 = self.critic(states2, actions)
+
+
 
         with torch.no_grad():
             # next_states2 = torch.cat([next_states, goals], dim=-1)
-            next_states2 = torch.cat([next_states, goals-next_states], dim=-1)
+            next_states2 = torch.cat([next_obs_alls, goals-next_states], dim=-1)
             next_actions, log_pis = self.actor.sample(next_states2)
             next_qs1, next_qs2 = self.critic_target(next_states2, next_actions)
             next_qs = torch.min(next_qs1, next_qs2) - self.alpha * log_pis
@@ -199,9 +220,9 @@ class GC_SAC(DDPG):
         (loss_critic1 + loss_critic2).backward(retain_graph=False)
         self.optim_critic.step()
 
-    def update_actor(self, states, goals):
+    def update_actor(self,obs_alls, goals, states):
         # states2 = torch.cat([states, goals], dim=-1)
-        states2 = torch.cat([states, goals-states], dim=-1)
+        states2 = torch.cat([obs_alls, goals-states], dim=-1)
         actions, log_pis = self.actor.sample(states2)
         qs1, qs2 = self.critic(states2, actions)
         loss_actor = (self.alpha * log_pis - torch.min(qs1, qs2)).mean()
