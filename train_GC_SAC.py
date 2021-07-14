@@ -23,7 +23,7 @@ EVAL_INTERVAL = 10 ** 3
 # env = gym.make(ENV_ID)
 # env_test = gym.make(ENV_ID)
 
-env_id = 1
+env_id = 0
 
 if env_id == 0:
     env = square3Env()
