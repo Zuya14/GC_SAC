@@ -92,6 +92,7 @@ class Trainer:
                 for _ in range(self.env_test._max_episode_steps):
                     action = self.algo.exploit(obs_all, goal, self.env_test.get_left_steps())
                     obs_all, reward, done, _ = self.env_test.step(action)
+                    state, velocity, obs = obs_all
                     episode_return += reward
                     # episode_return += sum(reward)
                     if done:
@@ -100,6 +101,7 @@ class Trainer:
                 for _ in range(self.env_test._max_episode_steps):
                     action = self.algo.exploit(obs_all, goal, state)
                     obs_all, reward, done, _ = self.env_test.step(action)
+                    state, velocity, obs = obs_all
                     episode_return += reward
                     if done:
                         break
@@ -107,6 +109,7 @@ class Trainer:
                 for _ in range(self.env_test._max_episode_steps):
                     action = self.algo.exploit(obs_all)
                     obs_all, reward, done, _ = self.env_test.step(action)
+                    state, velocity, obs = obs_all
                     episode_return += reward
                     if done:
                         break

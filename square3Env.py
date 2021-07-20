@@ -32,7 +32,10 @@ class sim_square3(sim_abs):
 
     def calcTgtPos(self, tgtPos):
         if tgtPos is None:
-            return np.array([7.5, 1.5, 0.0])
+            tgtPos = np.random.rand(2) * 8.5
+            tgtPos = tgtPos + 0.25 
+
+            return np.concatenate([tgtPos, [0.0]])
         else:
             return np.array(tgtPos)
 
@@ -54,7 +57,8 @@ class sim_square3(sim_abs):
         
         self.vx = action[0] * np.sin(dtheta)
         self.vy = action[0] * np.cos(dtheta)
-        self.w = action[3]
+        # self.w = action[3]
+        self.w = 0.0
 
     def isArrive(self):
         return  np.linalg.norm(self.tgt_pos - self.getState(), ord=2) < 0.1
@@ -140,7 +144,8 @@ class square3Env(gym.Env):
 
         self.sec = sec
 
-        self._max_episode_steps = 100
+        self._max_episode_steps = 500
+        # self._max_episode_steps = 100
 
         self.reset()
 
@@ -165,16 +170,16 @@ class square3Env(gym.Env):
 
         return new_env
 
-    def reset(self, initpos=None, tgtpos=[7.0, 1.5, 0.0]):
+    def reset(self, initpos=None, tgtpos=None):
         assert self.sim is not None, print("call setting!!") 
         self.sim.reset(sec=self.sec, initPos=initpos, tgtPos=tgtpos)
         return self.observe_all()
 
     def test_reset(self):
-        return self.reset(initpos=[1.0, 1.0, 0.0])
+        return self.reset(initpos=[1.5, 1.5, 0.0], tgtpos=[7.0, 1.5, 0.0])
 
     def createLidar(self):
-        resolusion = 8
+        resolusion = 90
         # resolusion = 12
         # resolusion = 36
         # resolusion = 1
@@ -208,11 +213,19 @@ class square3Env(gym.Env):
         return self.sim.getState(), self.sim.getVelocity(), self.sim.getObserve(self.lidar)
 
     def get_reward(self):
-        return self.calc_reward(self.sim.isContacts(), self.sim.getState(), self.sim.tgt_pos)
+        return self.calc_reward(self.sim.isContacts(), self.sim.getState(), self.sim.tgt_pos, self.sim.getOldState())
 
-    def calc_reward(self, contact, pos, tgt_pos):
+    def calc_reward(self, contact, pos, tgt_pos, old_pos):
         rewardContact = -100.0 if contact else 0.0
-        rewardDistance = - np.linalg.norm(tgt_pos - pos, ord=2)
+
+        d1 = np.linalg.norm(tgt_pos - old_pos, ord=2)
+        d2 = np.linalg.norm(tgt_pos - pos, ord=2)
+
+        # rewardDistance = - 0.1 * np.linalg.norm(tgt_pos - pos, ord=2)
+        rewardDistance = d1 - d2
+        if d2 > 0.1:
+            rewardDistance -= 0.1
+        
         reward = rewardContact + rewardDistance
 
         return reward

@@ -63,6 +63,8 @@ class sim_abs(ABC):
         x, y, theta = self.calcInitPos(initPos)
         self.loadBodys(x, y, theta)
 
+        self.old_state = self.getState()
+
         # x, y = self.getState()[:2]
         # self.distance = math.sqrt((x - 10.0)**2 + (y - 10.0)**2)
         # self.old_distance = self.distance
@@ -94,6 +96,8 @@ class sim_abs(ABC):
 
     def step(self, action):
 
+        self.old_state = self.getState()
+
         if not self.done:
 
             self.calcAction(action)
@@ -115,7 +119,6 @@ class sim_abs(ABC):
 
         self.action = np.array([self.vx, self.vy, self.w])
 
-        x, y = self.getState()[:2]
         self.steps += 1
 
         return self.done
@@ -132,6 +135,9 @@ class sim_abs(ABC):
     def getState(self):
         pos, ori = self.getRobotPosInfo()
         return np.array([pos[0], pos[1], p.getEulerFromQuaternion(ori)[2]])
+
+    def getOldState(self):
+        return self.old_state
 
     def getVelocity(self):
         return np.array([self.vx, self.vy, self.w ])

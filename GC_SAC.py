@@ -100,7 +100,7 @@ class GC_SAC():
             goal_size=goal_size,
             device=device
         )
-
+        
         # Actor-Criticのネットワークを構築する．
         self.actor = ActorNetwork(
             state_size=state_size[0]+velocity_size[0]+observation_size[0]+goal_size[0],
