@@ -1,62 +1,88 @@
+import sys
+import os
+import datetime
 import gym
 import pybullet_envs
 # from PPO import PPO
 from GC_SAC import GC_SAC
 from trainer import Trainer
 
-# from mazeEnv import mazeEnv 
-# from crossEnv import crossEnv 
 from square3Env import square3Env 
-# from maze3Env import maze3Env 
+from maze3Env import maze3Env 
 
-# ENV_ID = 'InvertedPendulumBulletEnv-v0'
-SEED = 0
-# NUM_STEPS = 5 * 10 ** 4
-# NUM_STEPS = 3 * 10 ** 4
-# NUM_STEPS = 2 * 10 ** 5
-# NUM_STEPS = 25 * 10 ** 4
-NUM_STEPS = 1 * 10 ** 5
-# NUM_STEPS = 3 * 10 ** 5
-EVAL_INTERVAL = 10 ** 3
 
-# env = gym.make(ENV_ID)
-# env_test = gym.make(ENV_ID)
+if __name__ == '__main__':
+    
+    assert len(sys.argv) == 2
+        
+    start_time = datetime.datetime.now()
 
-env_id = 0
+    NUM_STEPS = 5 * 10 ** 4
+    # NUM_STEPS = 1 * 10 ** 5
+    EVAL_INTERVAL = 10 ** 3
 
-if env_id == 0:
-    env = square3Env()
-    env_test = square3Env()
-elif env_id ==1:
-    env = maze3Env()
-    env_test = maze3Env()
+    env_id = int(sys.argv[1])
 
-env.setting()
-env_test.setting()
+    if env_id == 0:
+        env = square3Env()
+        env_test = square3Env()
+    elif env_id ==1:
+        env = maze3Env()
+        env_test = maze3Env()
 
-algo = GC_SAC(
-    state_size=env.state_space.shape,
-    action_size=env.action_space.shape,
-    velocity_size=env.velocity_space.shape,
-    observation_size=env.observation_space.shape,
-    goal_size = env.state_space.shape,
-    epsilon_decay = NUM_STEPS,
-    start_steps=1000
-)
+    env.setting()
+    env_test.setting()
 
-trainer = Trainer(
-    env=env,
-    env_test=env_test,
-    algo=algo,
-    num_steps=NUM_STEPS,
-    eval_interval=EVAL_INTERVAL,
-    is_GC=True
-)
+    algo = GC_SAC(
+        state_size=env.state_space.shape,
+        action_size=env.action_space.shape,
+        velocity_size=env.velocity_space.shape,
+        observation_size=env.observation_space.shape,
+        goal_size = env.state_space.shape,
+        epsilon_decay = NUM_STEPS,
+        start_steps=1000
+    )
 
-trainer.train()
+    trainer = Trainer(
+        env=env,
+        env_test=env_test,
+        algo=algo,
+        num_steps=NUM_STEPS,
+        eval_interval=EVAL_INTERVAL,
+        is_GC=True
+    )
 
-trainer.plot()
+    start_time = datetime.datetime.now()
+    now = '{0:%Y%m%d}-{0:%H%M}'.format(start_time)
+    path = "log/{:s}/{:s}/{:s}/".format(algo.name, env.name, now)
+    os.makedirs(path)
+    print("makedirs:" + path)
 
-algo.save()
+    with open(path + '/log.txt', 'w') as f:
+        
+        f.write('[STEPS]\n')
+        f.write('NUM_STEPS:{:f}\n'.format(NUM_STEPS))
+        f.write('EVAL_INTERVAL:{:f}\n'.format(EVAL_INTERVAL))
 
-# trainer.visualize()
+        f.write('[PARAMS]\n')
+        params = env.getParams()
+        for k, v in params.items():
+            f.write('{:s}:{:f}\n'.format(k, v))
+
+        trainer.train()
+
+        trainer.plot(path=path)
+
+        algo.save(path=path)
+
+        end_time = datetime.datetime.now()
+
+        f.write('[TIME]\n')
+        f.write('START:')
+        f.write(str(start_time))
+        f.write('\nEND:')
+        f.write(str(end_time))
+        f.write('\nTOTAL:')
+        f.write(str(end_time - start_time))
+
+    # trainer.visualize()

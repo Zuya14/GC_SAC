@@ -19,12 +19,16 @@ import bullet_lidar
 from sim_abs import sim_abs
 import numpy as np
 
-class sim_square3(sim_abs):
+class sim_maze3(sim_abs):
 
     def calcInitPos(self, initPos=None):
         if initPos is None:
             initPos = np.random.rand(2) * 8.5
             initPos = initPos + 0.25 
+
+            while self.onRect(initPos, [3.0-0.25, 0.0-0.25], [6.0+0.25, 6.0+0.25]):
+                initPos = np.random.rand(2) * 8.5
+                initPos = initPos + 0.25 
 
             return np.concatenate([initPos, [0.0]])
         else:
@@ -34,6 +38,10 @@ class sim_square3(sim_abs):
         if tgtPos is None:
             tgtPos = np.random.rand(2) * 8.5
             tgtPos = tgtPos + 0.25 
+
+            while self.onRect(tgtPos, [3.0-0.25, 0.0-0.25], [6.0+0.25, 6.0+0.25]):
+                tgtPos = np.random.rand(2) * 8.5
+                tgtPos = tgtPos + 0.25 
 
             return np.concatenate([tgtPos, [0.0]])
         else:
@@ -46,6 +54,11 @@ class sim_square3(sim_abs):
             self.bodyUniqueIds += [self.phisicsClient.loadURDF("urdf/wall.urdf", basePosition=(  i, -1, 0))]
             self.bodyUniqueIds += [self.phisicsClient.loadURDF("urdf/wall.urdf", basePosition=( -1,i-1, 0))]
             self.bodyUniqueIds += [self.phisicsClient.loadURDF("urdf/wall.urdf", basePosition=(  9,  i, 0))]
+
+        for i in range(6):
+            self.bodyUniqueIds += [self.phisicsClient.loadURDF("urdf/wall.urdf", basePosition=(  3,  i, 0))]
+            self.bodyUniqueIds += [self.phisicsClient.loadURDF("urdf/wall.urdf", basePosition=(  4,  i, 0))]
+            self.bodyUniqueIds += [self.phisicsClient.loadURDF("urdf/wall.urdf", basePosition=(  5,  i, 0))]
 
     ''' action = [v, cos, sin, theta] '''
     def calcAction(self, action):
@@ -101,6 +114,10 @@ class sim_square3(sim_abs):
         cv2.line(img, tuple(pts[1]), tuple(pts[3]), color=(255,255,255), thickness=1, lineType=cv2.LINE_8, shift=0)
         cv2.line(img, tuple(pts[2]), tuple(pts[3]), color=(255,255,255), thickness=1, lineType=cv2.LINE_8, shift=0)
 
+        cv2.line(img, tuple(pts[4]), tuple(pts[5]), color=(255,255,255), thickness=1, lineType=cv2.LINE_8, shift=0)
+        cv2.line(img, tuple(pts[5]), tuple(pts[6]), color=(255,255,255), thickness=1, lineType=cv2.LINE_8, shift=0)
+        cv2.line(img, tuple(pts[6]), tuple(pts[7]), color=(255,255,255), thickness=1, lineType=cv2.LINE_8, shift=0)
+
         # print([self.observe(), tgtpos])
         points2 = np.array([self.getState()[:2], self.tgt_pos[:2]])
         points2 += np.array([-4.5, -4.5])
@@ -119,7 +136,7 @@ class sim_square3(sim_abs):
         return img
 
 
-class square3Env(gym.Env):
+class maze3Env(gym.Env):
     global_id = 0
 
     def __init__(self):
@@ -127,14 +144,14 @@ class square3Env(gym.Env):
         self.seed(seed=random.randrange(10000))
         self.sim = None
 
-        self.name = "square3Env"
+        self.name = "maze3Env"
 
     def setting(self, _id=-1, mode=p.DIRECT, sec=0.1):
         if _id == -1:
-            self.sim = sim_square3(square3Env.global_id, mode, sec)
-            square3Env.global_id += 1
+            self.sim = sim_maze3(maze3Env.global_id, mode, sec)
+            maze3Env.global_id += 1
         else:
-            self.sim = sim_square3(_id, mode, sec)
+            self.sim = sim_maze3(_id, mode, sec)
 
         # self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
         self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
@@ -149,17 +166,17 @@ class square3Env(gym.Env):
 
         self._max_episode_steps = 500
         # self._max_episode_steps = 100
-        
+
         self.setParams()
 
         self.reset()
 
     def copy(self, _id=-1):
-        new_env = square3Env()
+        new_env = maze3Env()
         
         if _id == -1:
-            new_env.sim = self.sim.copy(square3Env.global_id)
-            square3Env.global_id += 1
+            new_env.sim = self.sim.copy(maze3Env.global_id)
+            maze3Env.global_id += 1
         else:
             new_env.sim = self.sim.copy(_id)
 
@@ -235,7 +252,7 @@ class square3Env(gym.Env):
 
     def setParams(self):
         self.params = {
-            'contact': 2.0,
+            'contact': 10.0,
             'distance': 1.0/self.sec,
             }
 
@@ -262,7 +279,7 @@ class square3Env(gym.Env):
 
 if __name__ == '__main__':
     
-    env = square3Env()
+    env = maze3Env()
     env.setting()
 
     i = 0

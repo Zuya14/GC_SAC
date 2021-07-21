@@ -144,7 +144,7 @@ class Trainer:
         del env
         return play_mp4()
 
-    def plot(self, s=""):
+    def plot(self, path="./", s=""):
         """ 平均収益のグラフを描画する． """
         fig = plt.figure(figsize=(8, 6))
         plt.plot(self.returns['step'], self.returns['return'])
@@ -154,7 +154,8 @@ class Trainer:
         # plt.title(f'{self.env.unwrapped.spec.id}', fontsize=24)
         plt.title('return', fontsize=24)
         plt.tight_layout()
-        fig.savefig("log/"+self.algo.name+s+".png")
+        # fig.savefig("log/"+self.algo.name+s+".png")
+        fig.savefig(path + self.algo.name + s + "_return.png")
 
     @property
     def time(self):

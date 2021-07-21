@@ -126,7 +126,8 @@ class sim_abs(ABC):
     def getObserve(self, bullet_lidar):
         pos, ori = self.getRobotPosInfo()
         yaw = p.getEulerFromQuaternion(ori)[2]
-        scanDist = bullet_lidar.scanDistance(self.phisicsClient, pos, yaw, height=0.1)
+        # scanDist = bullet_lidar.scanDistance(self.phisicsClient, pos, yaw, height=0.1)
+        scanDist = bullet_lidar.scanDistance(self.phisicsClient, pos, yaw, height=0.55)
         self.scanDist = scanDist / bullet_lidar.maxLen
         self.scanDist = self.scanDist.astype(np.float32)
 
