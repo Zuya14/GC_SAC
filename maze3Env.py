@@ -246,6 +246,8 @@ class maze3Env(gym.Env):
         # rewardDistance = - 0.1 * np.linalg.norm(tgt_pos - pos, ord=2)
         rewardDistance = (not contact) * self.params['distance'] * (d1 - d2) 
         
+        rewardDistance += - self.params['log_distance'] * np.log(1.0 + d2)
+
         reward = rewardContact + rewardDistance
 
         return reward
@@ -254,6 +256,7 @@ class maze3Env(gym.Env):
         self.params = {
             'contact': 10.0,
             'distance': 1.0/self.sec,
+            'log_distance': 0.1,
             }
 
     def getParams(self):

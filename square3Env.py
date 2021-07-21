@@ -235,7 +235,7 @@ class square3Env(gym.Env):
 
     def setParams(self):
         self.params = {
-            'contact': 2.0,
+            'contact': 10.0,
             'distance': 1.0/self.sec,
             }
 

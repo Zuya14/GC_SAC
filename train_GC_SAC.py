@@ -13,12 +13,12 @@ from maze3Env import maze3Env
 
 if __name__ == '__main__':
     
-    assert len(sys.argv) == 2
+    assert len(sys.argv) == 2 or len(sys.argv) == 3
         
     start_time = datetime.datetime.now()
 
-    NUM_STEPS = 5 * 10 ** 4
-    # NUM_STEPS = 1 * 10 ** 5
+    # NUM_STEPS = 5 * 10 ** 4
+    NUM_STEPS = 1 * 10 ** 5
     EVAL_INTERVAL = 10 ** 3
 
     env_id = int(sys.argv[1])
@@ -59,6 +59,13 @@ if __name__ == '__main__':
     print("makedirs:" + path)
 
     with open(path + '/log.txt', 'w') as f:
+
+        if len(sys.argv) == 3:
+            load_path = sys.argv[2]
+            algo.load(path=load_path)
+            f.write('[LOAD PATH]\n')
+            f.write('{:s}\n'.format(load_path))
+
         
         f.write('[STEPS]\n')
         f.write('NUM_STEPS:{:f}\n'.format(NUM_STEPS))
@@ -78,11 +85,8 @@ if __name__ == '__main__':
         end_time = datetime.datetime.now()
 
         f.write('[TIME]\n')
-        f.write('START:')
-        f.write(str(start_time))
-        f.write('\nEND:')
-        f.write(str(end_time))
-        f.write('\nTOTAL:')
-        f.write(str(end_time - start_time))
+        f.write('START:{:s}\n'.format(str(start_time)))
+        f.write('END:{:s}\n'.format(str(end_time)))
+        f.write('TOTAL:{:s}\n'.format(str(end_time - start_time)))
 
     # trainer.visualize()
