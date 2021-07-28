@@ -229,18 +229,27 @@ class square3Env(gym.Env):
         # rewardDistance = - 0.1 * np.linalg.norm(tgt_pos - pos, ord=2)
         rewardDistance = (not contact) * self.params['distance'] * (d1 - d2) 
         
+        rewardDistance += - self.params['log_distance'] * np.log(1.0 + d2)
+
         reward = rewardContact + rewardDistance
 
         return reward
-
     def setParams(self):
         self.params = {
             'contact': 10.0,
             'distance': 1.0/self.sec,
+            'log_distance': 0.1,
             }
 
     def getParams(self):
         return self.params
+
+    def getEnvParams(self):
+        return {
+            'lidar_points': self.lidar._shape[0],
+            'lidar_max': self.lidar.maxLen,
+            'lidar_min': self.lidar.minLen,
+            }
 
     def render(self, mode='human', close=False):
         # return self.sim.render(self.lidar)

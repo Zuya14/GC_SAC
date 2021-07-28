@@ -13,8 +13,13 @@ from maze3Env import maze3Env
 
 if __name__ == '__main__':
     
-    assert len(sys.argv) == 2 or len(sys.argv) == 3
-        
+    if not ( len(sys.argv) == 2 or len(sys.argv) == 3 ):
+        print()
+        print("!!!")
+        print("\tinput args <env_id> <weight_path(option)>")
+        print("!!!")
+        exit()
+
     start_time = datetime.datetime.now()
 
     # NUM_STEPS = 5 * 10 ** 4
@@ -55,8 +60,10 @@ if __name__ == '__main__':
     start_time = datetime.datetime.now()
     now = '{0:%Y%m%d}-{0:%H%M}'.format(start_time)
     path = "log/{:s}/{:s}/{:s}/".format(algo.name, env.name, now)
-    os.makedirs(path)
-    print("makedirs:" + path)
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+    print("dirs:" + path)
 
     with open(path + '/log.txt', 'w') as f:
 
@@ -73,6 +80,11 @@ if __name__ == '__main__':
 
         f.write('[PARAMS]\n')
         params = env.getParams()
+        for k, v in params.items():
+            f.write('{:s}:{:f}\n'.format(k, v))
+
+        f.write('[Env PARAMS]\n')
+        params = env.getEnvParams()
         for k, v in params.items():
             f.write('{:s}:{:f}\n'.format(k, v))
 

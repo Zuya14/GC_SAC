@@ -211,8 +211,8 @@ class maze3Env(gym.Env):
         endDeg = 180. + deg_offset
 
         # maxLen = 20.
-        # maxLen = 10.
-        maxLen = 5.
+        maxLen = 10.
+        # maxLen = 5.
         minLen = 0.
         return bullet_lidar.bullet_lidar(startDeg, endDeg, resolusion, maxLen, minLen)
 
@@ -254,13 +254,20 @@ class maze3Env(gym.Env):
 
     def setParams(self):
         self.params = {
-            'contact': 10.0,
+            'contact': 25.0,
             'distance': 1.0/self.sec,
-            'log_distance': 0.1,
+            'log_distance': 0.0,
             }
 
     def getParams(self):
         return self.params
+
+    def getEnvParams(self):
+        return {
+            'lidar_points': self.lidar._shape[0],
+            'lidar_max': self.lidar.maxLen,
+            'lidar_min': self.lidar.minLen,
+            }
 
     def render(self, mode='human', close=False):
         # return self.sim.render(self.lidar)
