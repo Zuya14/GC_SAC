@@ -73,8 +73,13 @@ class sim_maze3(sim_abs):
         # self.w = action[3]
         self.w = 0.0
 
-    def isArrive(self):
-        return  np.linalg.norm(self.tgt_pos - self.getState(), ord=2) < 0.1
+    def isArrive(self, tgtPos=None, pos=None):
+        if tgtPos is None:
+            tgtPos = self.tgt_pos
+        if pos is None:
+            pos = self.getState()
+
+        return  np.linalg.norm(tgtPos - pos, ord=2) < 0.1
         
     def render(self):
         w = 800
@@ -248,15 +253,24 @@ class maze3Env(gym.Env):
         
         rewardDistance += - self.params['log_distance'] * np.log(1.0 + d2)
 
-        reward = rewardContact + rewardDistance
+        rewardMove = self.params['move'] * np.abs(d1 - d2)
+        
+        rewardForward = self.params['forward'] * np.abs(d1 - d2) *((d1 - d2) >0)
+
+        rewardArrive = (not contact) * self.params['arrive'] * self.sim.isArrive(tgt_pos, pos)
+
+        reward = rewardContact + rewardDistance + rewardMove + rewardForward + rewardArrive
 
         return reward
 
     def setParams(self):
         self.params = {
-            'contact': 25.0,
-            'distance': 1.0/self.sec,
-            'log_distance': 0.0,
+            'contact': 10.0,
+            'distance': 0.0/self.sec,
+            'log_distance': 1.0,
+            'move': 1.0/self.sec,
+            'forward': 0.0/self.sec,
+            'arrive': 100.0,
             }
 
     def getParams(self):

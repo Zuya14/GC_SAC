@@ -60,8 +60,13 @@ class sim_square3(sim_abs):
         # self.w = action[3]
         self.w = 0.0
 
-    def isArrive(self):
-        return  np.linalg.norm(self.tgt_pos - self.getState(), ord=2) < 0.1
+    def isArrive(self, tgtPos=None, pos=None):
+        if tgtPos is None:
+            tgtPos = self.tgt_pos
+        if pos is None:
+            pos = self.getState()
+
+        return  np.linalg.norm(tgtPos - pos, ord=2) < 0.1
         
     def render(self):
         w = 800
@@ -231,14 +236,21 @@ class square3Env(gym.Env):
         
         rewardDistance += - self.params['log_distance'] * np.log(1.0 + d2)
 
-        reward = rewardContact + rewardDistance
+        rewardMove = self.params['move'] * np.abs(d1 - d2)
+
+        rewardArrive = (not contact) * self.params['arrive'] * self.sim.isArrive(tgt_pos, pos)
+
+        reward = rewardContact + rewardDistance + rewardMove + rewardArrive
 
         return reward
+
     def setParams(self):
         self.params = {
             'contact': 10.0,
-            'distance': 1.0/self.sec,
-            'log_distance': 0.1,
+            'distance': 0.0/self.sec,
+            'log_distance': 0.0,
+            'move': 1.0/self.sec,
+            'arrive': 10.0,
             }
 
     def getParams(self):
