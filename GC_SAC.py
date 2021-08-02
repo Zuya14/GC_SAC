@@ -1,4 +1,4 @@
-from DDPG import DDPG, CriticNetwork
+# from DDPG import DDPG, CriticNetwork
 from ReplayBuffer import ReplayBuffer
 import torch
 import torch.nn as nn
@@ -86,8 +86,9 @@ class CriticNetwork(nn.Module):
 class GC_SAC():
 
     def __init__(self, state_size, velocity_size, observation_size, action_size, goal_size, hidden_size=64, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-                 batch_size=256, gamma=0.99, lr_actor=1e-3, lr_critic=1e-3,
-                 replay_size=10**6, start_steps=10**4, tau=5e-3, alpha=0.2, reward_scale=1.0, epsilon_decay = 50000):
+                 batch_size=256, gamma=0.99, lr=3e-4,
+                 replay_size=10**6, start_steps=10**4, tau=5e-3, alpha=0.2, reward_scale=1.0, epsilon_decay = 50000,
+                 automatic_entropy_tuning=True):
 
         self.name = 'GC_SAC'
 
@@ -124,8 +125,8 @@ class GC_SAC():
             param.requires_grad = False
 
         # オプティマイザ．
-        self.optim_actor = torch.optim.Adam(self.actor.parameters(), lr=lr_actor)
-        self.optim_critic = torch.optim.Adam(self.critic.parameters(), lr=lr_critic)
+        self.optim_actor = torch.optim.Adam(self.actor.parameters(), lr=lr)
+        self.optim_critic = torch.optim.Adam(self.critic.parameters(), lr=lr)
 
         self.device = device
 
@@ -139,6 +140,13 @@ class GC_SAC():
         self.tau = tau
         self.alpha = alpha
         self.reward_scale = reward_scale
+
+        self.automatic_entropy_tuning = automatic_entropy_tuning
+
+        if self.automatic_entropy_tuning:
+                self.target_entropy = -torch.prod(torch.Tensor(action_size[0]).to(self.device)).item()
+                self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
+                self.alpha_optim = torch.optim.Adam([self.log_alpha], lr=lr)
     
     def is_update(self, steps):
         # 学習初期の一定期間(start_steps)は学習しない．
@@ -214,18 +222,21 @@ class GC_SAC():
         obs_alls = torch.cat([states, velocitys, observations], dim=-1)
         next_obs_alls = torch.cat([next_states, next_velocitys, next_observations], dim=-1)
 
-        self.update_critic(obs_alls, actions, rewards, dones, next_obs_alls, goals, states, next_states)
-        self.update_actor(obs_alls, goals, states)
+        states2 = torch.cat([obs_alls, goals-states], dim=-1)
+        next_states2 = torch.cat([next_obs_alls, goals-next_states], dim=-1)
+
+        self.update_critic(states2, next_states2, obs_alls, actions, rewards, dones, next_obs_alls, goals, states, next_states)
+        self.update_actor(states2, obs_alls, goals, states)
         self.update_target()
 
-    def update_critic(self, obs_alls, actions, rewards, dones, next_obs_alls, goals, states, next_states):
+    def update_critic(self, states2, next_states2, obs_alls, actions, rewards, dones, next_obs_alls, goals, states, next_states):
         # states2 = torch.cat([states, goals], dim=-1)
-        states2 = torch.cat([obs_alls, goals-states], dim=-1)
+        # states2 = torch.cat([obs_alls, goals-states], dim=-1)
         curr_qs1, curr_qs2 = self.critic(states2, actions)
 
         with torch.no_grad():
             # next_states2 = torch.cat([next_states, goals], dim=-1)
-            next_states2 = torch.cat([next_obs_alls, goals-next_states], dim=-1)
+            # next_states2 = torch.cat([next_obs_alls, goals-next_states], dim=-1)
             next_actions, log_pis = self.actor.sample(next_states2)
             next_qs1, next_qs2 = self.critic_target(next_states2, next_actions)
             next_qs = torch.min(next_qs1, next_qs2) - self.alpha * log_pis
@@ -238,9 +249,9 @@ class GC_SAC():
         (loss_critic1 + loss_critic2).backward(retain_graph=False)
         self.optim_critic.step()
 
-    def update_actor(self,obs_alls, goals, states):
+    def update_actor(self, states2, obs_alls, goals, states):
         # states2 = torch.cat([states, goals], dim=-1)
-        states2 = torch.cat([obs_alls, goals-states], dim=-1)
+        # states2 = torch.cat([obs_alls, goals-states], dim=-1)
         actions, log_pis = self.actor.sample(states2)
         qs1, qs2 = self.critic(states2, actions)
         loss_actor = (self.alpha * log_pis - torch.min(qs1, qs2)).mean()
@@ -248,6 +259,15 @@ class GC_SAC():
         self.optim_actor.zero_grad()
         loss_actor.backward(retain_graph=False)
         self.optim_actor.step()
+
+        if self.automatic_entropy_tuning:
+            alpha_loss = -(self.log_alpha * (log_pis + self.target_entropy).detach()).mean()
+
+            self.alpha_optim.zero_grad()
+            alpha_loss.backward()
+            self.alpha_optim.step()
+
+            self.alpha = self.log_alpha.exp()
 
     def update_target(self):
         for t, s in zip(self.critic_target.parameters(), self.critic.parameters()):
