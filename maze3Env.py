@@ -277,12 +277,12 @@ class maze3Env(gym.Env):
 
     def setParams(self):
         self.params = {
-            'arrive': 10.0,
+            'arrive': 100.0,
             'contact': 1.0,
             'distance': 0.0,
             'log_distance': 0.0,
-            'move': 0.0,
-            'forward': 0.0,
+            'move': 1.0,
+            'forward': 1.0,
             }
 
     def getParams(self):
