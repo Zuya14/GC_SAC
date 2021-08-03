@@ -184,6 +184,7 @@ class Trainer:
             obs_all, _, done, _ = self.env.step(action)
             video.write(self.env.render())
             if done:
+                video.release()
                 break
 
     def saveVideo_subgoals(self, subgoals, path="./", s=""):   

@@ -1,11 +1,20 @@
+import os
 import sys
+import glob
 import cv2
 
 if __name__ == '__main__':
     
     assert len(sys.argv) == 2
 
-    cap = cv2.VideoCapture(sys.argv[1])
+    arg = sys.argv[1]
+
+    if os.path.isdir(arg):
+        arg = glob.glob(arg + '*.mp4')[0]
+
+    # print(arg)
+
+    cap = cv2.VideoCapture(arg)
 
     window_name = sys.argv[1]
     delay = int(1000/cap.get(cv2.CAP_PROP_FPS))

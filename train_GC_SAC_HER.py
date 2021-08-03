@@ -4,7 +4,7 @@ import datetime
 import gym
 import pybullet_envs
 # from PPO import PPO
-from GC_SAC import GC_SAC
+from GC_SAC_HER import GC_SAC_HER
 from trainer import Trainer
 
 from square3Env import square3Env 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     env.setting()
     env_test.setting()
 
-    algo = GC_SAC(
+    algo = GC_SAC_HER(
         state_size=env.state_space.shape,
         action_size=env.action_space.shape,
         velocity_size=env.velocity_space.shape,
