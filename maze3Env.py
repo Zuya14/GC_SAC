@@ -274,7 +274,7 @@ class maze3Env(gym.Env):
             
             rewardForward = self.params['forward'] * np.abs(d1 - d2) *((d1 - d2) >0)
 
-            rewardClose = (-self.params['close'] * d2 / self.params['close_thr'])  *(d2 < self.params['close_thr'])
+            rewardClose = (-self.params['close'] * d2 / self.params['close_thr'] + self.params['close'])  *(d2 < self.params['close_thr'])
 
             reward += rewardDistance + rewardMove + rewardForward + rewardClose
 

@@ -258,7 +258,7 @@ class square3Env(gym.Env):
 
             reward += rewardDistance + rewardMove + rewardForward
 
-            rewardClose = (-self.params['close'] * d2 / self.params['close_thr'])  *(d2 < self.params['close_thr'])
+            rewardClose = (-self.params['close'] * d2 / self.params['close_thr'] + self.params['close'])  *(d2 < self.params['close_thr'])
 
             reward += rewardDistance + rewardMove + rewardForward + rewardClose
 
