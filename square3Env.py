@@ -226,31 +226,45 @@ class square3Env(gym.Env):
         return self.calc_reward(self.sim.isContacts(), self.sim.getState(), self.sim.tgt_pos, self.sim.getOldState())
 
     def calc_reward(self, contact, pos, tgt_pos, old_pos):
-        rewardContact = -self.params['contact'] if contact else 0.0
-
-        d1 = np.linalg.norm(tgt_pos - old_pos, ord=2)
-        d2 = np.linalg.norm(tgt_pos - pos, ord=2)
-
-        # rewardDistance = - 0.1 * np.linalg.norm(tgt_pos - pos, ord=2)
-        rewardDistance = (not contact) * self.params['distance'] * (d1 - d2) 
-        
-        rewardDistance += - self.params['log_distance'] * np.log(1.0 + d2)
-
-        rewardMove = self.params['move'] * np.abs(d1 - d2)
 
         rewardArrive = (not contact) * self.params['arrive'] * self.sim.isArrive(tgt_pos, pos)
 
-        reward = rewardContact + rewardDistance + rewardMove + rewardArrive
+        rewardContact = -self.params['contact'] if contact else 0.0
+
+        reward = rewardArrive + rewardContact
+
+        if old_pos is None:
+            self.params['distance'] = 0.0
+            self.params['log_distance'] = 0.0
+            self.params['move'] = 0.0
+            self.params['forward'] = 0.0
+
+            rewardDistance = 0.0
+            rewardMove = 0.0
+            rewardForward = 0.0
+        else:
+            d1 = np.linalg.norm(tgt_pos - old_pos, ord=2)
+            d2 = np.linalg.norm(tgt_pos - pos, ord=2)
+
+            rewardDistance = (not contact) * self.params['distance'] * (d1 - d2) 
+            rewardDistance += - self.params['log_distance'] * np.log(1.0 + d2)
+
+            rewardMove = self.params['move'] * np.abs(d1 - d2)
+            
+            rewardForward = self.params['forward'] * np.abs(d1 - d2) *((d1 - d2) >0)
+
+            reward += rewardDistance + rewardMove + rewardForward
 
         return reward
 
     def setParams(self):
         self.params = {
-            'contact': 10.0,
-            'distance': 0.0/self.sec,
+            'arrive': 100.0,
+            'contact': 20.0,
+            'distance': 1.0,
             'log_distance': 0.0,
-            'move': 1.0/self.sec,
-            'arrive': 10.0,
+            'move': 1.0,
+            'forward': 1.0,
             }
 
     def getParams(self):

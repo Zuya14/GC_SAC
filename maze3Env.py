@@ -278,7 +278,7 @@ class maze3Env(gym.Env):
     def setParams(self):
         self.params = {
             'arrive': 100.0,
-            'contact': 1.0,
+            'contact': 15.0,
             'distance': 0.0,
             'log_distance': 0.0,
             'move': 1.0,
