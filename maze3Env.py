@@ -256,10 +256,13 @@ class maze3Env(gym.Env):
             self.params['log_distance'] = 0.0
             self.params['move'] = 0.0
             self.params['forward'] = 0.0
+            self.params['close'] = 0.0
+            self.params['close_thr'] = 0.0
 
             rewardDistance = 0.0
             rewardMove = 0.0
             rewardForward = 0.0
+            rewardClose = 0.0
         else:
             d1 = np.linalg.norm(tgt_pos - old_pos, ord=2)
             d2 = np.linalg.norm(tgt_pos - pos, ord=2)
@@ -271,7 +274,9 @@ class maze3Env(gym.Env):
             
             rewardForward = self.params['forward'] * np.abs(d1 - d2) *((d1 - d2) >0)
 
-            reward += rewardDistance + rewardMove + rewardForward
+            rewardClose = (-self.params['close'] * d2 / self.params['close_thr'])  *(d2 < self.params['close_thr'])
+
+            reward += rewardDistance + rewardMove + rewardForward + rewardClose
 
         return reward
 
@@ -283,6 +288,8 @@ class maze3Env(gym.Env):
             'log_distance': 0.0,
             'move': 1.0,
             'forward': 1.0,
+            'close': 1.0,
+            'close_thr': 1.0,
             }
 
     def getParams(self):

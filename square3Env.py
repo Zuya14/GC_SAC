@@ -238,10 +238,13 @@ class square3Env(gym.Env):
             self.params['log_distance'] = 0.0
             self.params['move'] = 0.0
             self.params['forward'] = 0.0
+            self.params['close'] = 0.0
+            self.params['close_thr'] = 0.0
 
             rewardDistance = 0.0
             rewardMove = 0.0
             rewardForward = 0.0
+            rewardClose = 0.0
         else:
             d1 = np.linalg.norm(tgt_pos - old_pos, ord=2)
             d2 = np.linalg.norm(tgt_pos - pos, ord=2)
@@ -255,6 +258,10 @@ class square3Env(gym.Env):
 
             reward += rewardDistance + rewardMove + rewardForward
 
+            rewardClose = (-self.params['close'] * d2 / self.params['close_thr'])  *(d2 < self.params['close_thr'])
+
+            reward += rewardDistance + rewardMove + rewardForward + rewardClose
+
         return reward
 
     def setParams(self):
@@ -265,6 +272,8 @@ class square3Env(gym.Env):
             'log_distance': 0.0,
             'move': 1.0,
             'forward': 1.0,
+            'close': 1.0,
+            'close_thr': 1.0,
             }
 
     def getParams(self):
