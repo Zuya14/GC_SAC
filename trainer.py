@@ -24,7 +24,7 @@ def play_mp4():
 
 class Trainer:
 
-    def __init__(self, env, env_test, algo, seed=0, num_steps=10**6, eval_interval=10**4, num_eval_episodes=3, is_GC=False):
+    def __init__(self, env, env_test, algo, seed=0, num_steps=10**6, eval_interval=10**4, num_eval_episodes=1, is_GC=False):
 
         self.env = env
         self.env_test = env_test
