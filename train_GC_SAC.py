@@ -72,6 +72,8 @@ if __name__ == '__main__':
             algo.load(path=load_path)
             f.write('[LOAD PATH]\n')
             f.write('{:s}\n'.format(load_path))
+            print("load:" + load_path)
+
 
         
         f.write('[STEPS]\n')

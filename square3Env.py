@@ -199,8 +199,8 @@ class square3Env(gym.Env):
         endDeg = 180. + deg_offset
 
         # maxLen = 20.
-        # maxLen = 10.
-        maxLen = 5.
+        maxLen = 10.
+        # maxLen = 5.
         minLen = 0.
         return bullet_lidar.bullet_lidar(startDeg, endDeg, resolusion, maxLen, minLen)
 
