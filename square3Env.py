@@ -68,37 +68,28 @@ class sim_square3(sim_abs):
 
         return  np.linalg.norm(tgtPos - pos, ord=2) < 0.1
         
-    def render(self):
-        w = 800
-        h = 800
-        img = np.zeros((w, h, 3), np.uint8)
-        center = (w//2, h//2)
-
-        points = [
+    def getWallPoints(self):
+        return  np.array([
             [0.0, 0.0],
             [0.0, 9.0],
             [9.0, 0.0],
             [9.0, 9.0],
-            [3.0, 0.0],
-            [3.0, 6.0],
-            [6.0, 6.0],
-            [6.0, 0.0],
-        ]
+        ])
 
-        points = np.array(points)
-        points += np.array([-4.5, -4.5])
+
+    def renderWall(self, img, center, maxLen):
+
+        points = self.getWallPoints()
+        points -= self.renderOffset()
 
         pts = np.zeros((points.shape[0], 2))
-
-        k = center[0] if w<h else center[1]
-        # k = 10
-        maxLen = 5
+        k = min(center[0], center[1])
 
         for a, b in zip(pts, points):
             a[0] =  b[0] * (k/maxLen)
             a[1] = -b[1] * (k/maxLen)
 
-        pts += center
+        pts += center + self.getRenderMarginOffset() * (k/maxLen)
         pts = pts.astype(np.int)
 
         cv2.line(img, tuple(pts[0]), tuple(pts[1]), color=(255,255,255), thickness=1, lineType=cv2.LINE_8, shift=0)
@@ -106,23 +97,15 @@ class sim_square3(sim_abs):
         cv2.line(img, tuple(pts[1]), tuple(pts[3]), color=(255,255,255), thickness=1, lineType=cv2.LINE_8, shift=0)
         cv2.line(img, tuple(pts[2]), tuple(pts[3]), color=(255,255,255), thickness=1, lineType=cv2.LINE_8, shift=0)
 
-        # print([self.observe(), tgtpos])
-        points2 = np.array([self.getState()[:2], self.tgt_pos[:2]])
-        points2 += np.array([-4.5, -4.5])
-        pts2 = np.zeros((2, 2))
-
-        for a, b in zip(pts2, points2):
-            a[0] =  b[0] * (k/maxLen)
-            a[1] = -b[1] * (k/maxLen)
-
-        pts2 += center
-        pts2 = pts2.astype(np.int)
-
-        cv2.circle(img, tuple(pts2[0]), radius=20, color=(255,0,0), thickness=-1, lineType=cv2.LINE_8, shift=0)
-        cv2.circle(img, tuple(pts2[1]), radius=20, color=(0,0,255), thickness=2, lineType=cv2.LINE_8, shift=0)
-
         return img
 
+    def createImage(self):
+        w = 800
+        h = 800
+        img = np.zeros((w, h, 3), np.uint8)
+        center = (w//2, h//2)
+
+        return img, center
 
 class square3Env(gym.Env):
     global_id = 0
@@ -267,7 +250,7 @@ class square3Env(gym.Env):
     def setParams(self):
         self.params = {
             'arrive': 100.0,
-            'contact': 20.0,
+            'contact': 15.0,
             'distance': 1.0,
             'log_distance': 0.0,
             'move': 1.0,
@@ -287,8 +270,8 @@ class square3Env(gym.Env):
             }
 
     def render(self, mode='human', close=False):
-        # return self.sim.render(self.lidar)
-        return self.sim.render()
+        return self.sim.render(self.lidar)
+        # return self.sim.render()
 
     def close(self):
         self.sim.close()

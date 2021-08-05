@@ -24,6 +24,7 @@ if __name__ == '__main__':
 
     # NUM_STEPS = 5 * 10 ** 4
     NUM_STEPS = 1 * 10 ** 5
+    # NUM_STEPS = 5 * 10 ** 5
     EVAL_INTERVAL = 10 ** 3
 
     env_id = int(sys.argv[1])

@@ -19,6 +19,8 @@ class sim_abs(ABC):
         self.phisicsClient = bc.BulletClient(connection_mode=mode)
         self.reset(sec=sec)
 
+        self.scanHeight = 0.55
+
     @abstractmethod
     def calcInitPos(self, initPos=None):
         if initPos is None:
@@ -127,7 +129,7 @@ class sim_abs(ABC):
         pos, ori = self.getRobotPosInfo()
         yaw = p.getEulerFromQuaternion(ori)[2]
         # scanDist = bullet_lidar.scanDistance(self.phisicsClient, pos, yaw, height=0.1)
-        scanDist = bullet_lidar.scanDistance(self.phisicsClient, pos, yaw, height=0.55)
+        scanDist = bullet_lidar.scanDistance(self.phisicsClient, pos, yaw, height=self.scanHeight)
         # self.scanDist = scanDist / bullet_lidar.maxLen
         self.scanDist = scanDist
         self.scanDist = self.scanDist.astype(np.float32)
@@ -144,17 +146,17 @@ class sim_abs(ABC):
     def getVelocity(self):
         return np.array([self.vx, self.vy, self.w ])
 
-    def render(self, bullet_lidar):
-        pos, ori = self.getRobotPosInfo()
-        yaw = p.getEulerFromQuaternion(ori)[2]
-        scanDist = bullet_lidar.scanDistance(self.phisicsClient, pos, yaw, height=0.1)
-        self.scanDist = scanDist / bullet_lidar.maxLen
-        self.scanDist = self.scanDist.astype(np.float32)
+    # def render(self, bullet_lidar):
+    #     pos, ori = self.getRobotPosInfo()
+    #     yaw = p.getEulerFromQuaternion(ori)[2]
+    #     scanDist = bullet_lidar.scanDistance(self.phisicsClient, pos, yaw, height=0.1)
+    #     self.scanDist = scanDist / bullet_lidar.maxLen
+    #     self.scanDist = self.scanDist.astype(np.float32)
 
-        img = lidar_util.imshowLocalDistance("render"+str(self.phisicsClient), 800, 800, bullet_lidar, self.scanDist, maxLen=1.0, show=False, line=True)
-        # print(self.scanDist.shape)
+    #     img = lidar_util.imshowLocalDistance("render"+str(self.phisicsClient), 800, 800, bullet_lidar, self.scanDist, maxLen=1.0, show=False, line=True)
+    #     # print(self.scanDist.shape)
 
-        return img
+    #     return img
 
     def updateRobotInfo(self):
 
@@ -188,6 +190,92 @@ class sim_abs(ABC):
     def isDone(self):
         return self.done
 
+    def renderOffset(self):
+        return np.max(self.getWallPoints(), axis=0)//2
+
     @abstractmethod
-    def render(self):
+    def getWallPoints(self):
+        pass
+
+    @abstractmethod
+    def renderWall(self, img, center, maxLen):
+        pass
+
+    def renderRobotAndGoal(self, img, center, maxLen):
+        points = np.array([self.getState()[:2], self.tgt_pos[:2]])
+        points -= self.renderOffset()
+
+        pts = np.zeros((2, 2))
+        k = min(center[0], center[1])
+
+        for a, b in zip(pts, points):
+            a[0] =  b[0] * (k/maxLen)
+            a[1] = -b[1] * (k/maxLen)
+
+        pts += center + self.getRenderMarginOffset() * (k/maxLen)
+        pts = pts.astype(np.int)
+
+        cv2.circle(img, tuple(pts[0]), radius=20, color=(255,0,0), thickness=-1, lineType=cv2.LINE_8, shift=0)
+        cv2.circle(img, tuple(pts[1]), radius=20, color=(0,0,255), thickness=2, lineType=cv2.LINE_8, shift=0)
+
+        return img
+
+    def renderLidar(self, img, center, maxLen, lidar):
+        rads = np.arange(lidar.startDeg, lidar.endDeg, lidar.resolusion)*(math.pi/180.0)
+        cos = np.cos(rads)
+        sin = np.sin(rads)
+
+        pos, ori = self.getRobotPosInfo()
+        yaw = p.getEulerFromQuaternion(ori)[2]
+        scanDist = lidar.scanDistance(self.phisicsClient, pos, yaw, height=self.scanHeight)
+
+        points = np.array([[l*c, l*s] for l, c, s in zip(scanDist, cos, sin)])
+
+        # points = lidar. scanPos(self.phisicsClient, pos, yaw, self.scanHeight)
+
+        pos = np.array(pos[:2])
+        points += pos 
+
+        k = min(center[0], center[1])
+
+        points -= self.renderOffset()
+        pts = np.zeros((points.shape[0], 2))
+
+        for a, b in zip(pts, points):
+            a[0] =  b[0] * (k/maxLen)
+            a[1] = -b[1] * (k/maxLen)
+            
+        pts += center + self.getRenderMarginOffset() * (k/maxLen)
+        pts = pts.astype(np.int)
+
+        pos -= self.renderOffset()
+        pos[0] =  pos[0] * (k/maxLen)
+        pos[1] = -pos[1] * (k/maxLen)
+        pos += center + self.getRenderMarginOffset() * (k/maxLen)
+        pos = tuple(pos.astype(np.int))
+
+        for pt in pts:
+            cv2.line(img, pos, tuple(pt), color=(255,0,0), thickness=1, lineType=cv2.LINE_8, shift=0)
+
+        return img
+
+    def render(self, lidar):
+        img, center = self.createImage()
+        maxLen = np.max(self.getWallPoints())/2 + self.getRenderMargin()
+
+        img = self.renderLidar(img, center, maxLen, lidar)
+        img = self.renderWall(img, center, maxLen)
+        img = self.renderRobotAndGoal(img, center, maxLen)
+
+        return img
+
+    def getRenderMargin(self):
+        return 0.5
+
+    def getRenderMarginOffset(self):
+        return np.array([-self.getRenderMargin(), self.getRenderMargin()])
+
+    @abstractmethod
+    def createImage(self):
+        # return img, center
         pass
